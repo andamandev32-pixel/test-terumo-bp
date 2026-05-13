@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BP Monitor Simulator – Terumo R1 Frame</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1c2537;
+    --border: #2d3748;
+    --accent: #3b82f6;
+    --accent2: #6366f1;
+    --green: #10b981;
+    --red: #ef4444;
+    --yellow: #f59e0b;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  h1 {
+    font-size: 22px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #60a5fa, #818cf8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 4px;
+  }
+
+  .subtitle { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 20px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+  }
+
+  .card-title {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  /* ── Port Controls ── */
+  .port-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  select, input[type=number], input[type=text] {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  select:focus, input:focus { border-color: var(--accent); }
+
+  .btn {
+    padding: 9px 18px;
+    border-radius: 8px;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-danger  { background: var(--red);   color: #fff; }
+  .btn-danger:hover  { background: #dc2626; }
+  .btn-green   { background: var(--green); color: #fff; }
+  .btn-green:hover   { background: #059669; }
+  .btn-ghost {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .status-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--muted);
+    display: inline-block;
+    margin-right: 6px;
+    transition: background 0.3s;
+  }
+  .status-dot.connected { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .status-dot.error { background: var(--red); }
+
+  /* ── Vitals ── */
+  .vitals-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 16px 0;
+  }
+
+  .vital-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    text-align: center;
+  }
+
+  .vital-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .vital-input {
+    width: 100%;
+    font-size: 32px;
+    font-weight: 700;
+    text-align: center;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid var(--border);
+    border-radius: 0;
+    padding: 4px 0;
+    color: var(--text);
+    transition: border-color 0.2s;
+  }
+  .vital-input:focus { border-bottom-color: var(--accent); outline: none; }
+
+  .vital-unit {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .vital-card.sys  .vital-input { color: #f87171; }
+  .vital-card.dia  .vital-input { color: #fb923c; }
+  .vital-card.map  .vital-input { color: #a78bfa; }
+  .vital-card.pulse .vital-input { color: #34d399; }
+
+  /* ── Device ID row ── */
+  .id-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .id-row label { font-size: 13px; color: var(--muted); white-space: nowrap; }
+  .id-row input { flex: 1; font-family: var(--mono); }
+
+  /* ── Send Panel ── */
+  .send-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+
+  .auto-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--muted);
+    padding: 10px;
+    background: var(--surface2);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .auto-row input[type=number] { width: 70px; padding: 6px 8px; font-size: 13px; }
+  .toggle {
+    position: relative;
+    width: 42px; height: 24px;
+    flex-shrink: 0;
+  }
+  .toggle input { display: none; }
+  .toggle-track {
+    position: absolute; inset: 0;
+    background: var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .toggle input:checked ~ .toggle-track { background: var(--green); }
+  .toggle-thumb {
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 18px; height: 18px;
+    background: #fff;
+    border-radius: 50%;
+    pointer-events: none;
+    transition: transform 0.2s;
+  }
+  .toggle input:checked ~ .toggle-thumb { transform: translateX(18px); }
+
+  /* ── Frame Preview ── */
+  .frame-preview {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: #050b15;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    color: #60a5fa;
+    word-break: break-all;
+    margin-bottom: 16px;
+    min-height: 48px;
+  }
+  .frame-preview .stx { color: #a78bfa; }
+  .frame-preview .etx { color: #a78bfa; }
+  .frame-preview .bcc { color: #f59e0b; }
+  .frame-preview .data { color: #4ade80; }
+
+  /* ── Terminal ── */
+  .terminal {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: #050b15;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    height: 100%;
+    min-height: 420px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    line-height: 1.7;
+  }
+  .terminal .tx   { color: #60a5fa; }
+  .terminal .info { color: #64748b; }
+  .terminal .err  { color: #f87171; }
+  .terminal .hex  { color: #475569; font-size: 10.5px; }
+
+  .term-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  /* ── Pulse animation ── */
+  @keyframes pulse-ring {
+    0%   { transform: scale(1);   opacity: 1; }
+    100% { transform: scale(1.6); opacity: 0; }
+  }
+  .sending-indicator {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--green);
+    font-weight: 600;
+  }
+  .sending-indicator.active { display: flex; }
+  .pulse-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--green);
+    position: relative;
+  }
+  .pulse-dot::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse-ring 1s ease-out infinite;
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 16px 0;
+  }
+
+  /* ── Presets ── */
+  .preset-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  .preset-btn {
+    padding: 7px 4px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.18s;
+    font-family: inherit;
+    line-height: 1.3;
+  }
+  .preset-btn:hover { border-color: var(--accent); color: var(--accent); background: #1e2d45; }
+  .preset-btn.active { border-color: var(--accent); background: #1e2d45; color: #60a5fa; }
+  .preset-btn .pb-name { display: block; }
+  .preset-btn .pb-val  { display: block; font-size: 10px; color: var(--muted); font-weight: 400; margin-top: 1px; }
+  .preset-btn:hover .pb-val { color: #93c5fd; }
+
+  /* ── Range panel ── */
+  .range-panel {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+  }
+  .range-row {
+    display: grid;
+    grid-template-columns: 60px 1fr 1fr;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+    font-size: 12px;
+  }
+  .range-row:last-child { margin-bottom: 0; }
+  .range-label { color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; }
+  .range-row input[type=number] { padding: 5px 7px; font-size: 12px; }
+
+  /* ── Section toggle ── */
+  .section-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    user-select: none;
+    margin-bottom: 10px;
+  }
+  .section-toggle .arrow {
+    font-size: 11px;
+    color: var(--muted);
+    transition: transform 0.2s;
+  }
+  .section-toggle.open .arrow { transform: rotate(180deg); }
+</style>
+</head>
+<body>
+
+<div style="max-width:1100px; margin:0 auto 20px;">
+  <h1>🩺 Terumo BP Simulator</h1>
+  <p class="subtitle">ส่ง R1 Frame จำลองออก Serial Port — เข้ากันได้กับ web_serial_example.html</p>
+</div>
+
+<div class="layout">
+
+  <!-- LEFT: Controls -->
+  <div>
+    <!-- Port Card -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title">Serial Port</div>
+
+      <div class="port-row">
+        <select id="baudRate" style="flex:1;">
+          <option value="9600">9600 bps</option>
+          <option value="19200" selected>19200 bps</option>
+          <option value="38400">38400 bps</option>
+          <option value="115200">115200 bps</option>
+        </select>
+        <button class="btn btn-primary" id="connectBtn" onclick="toggleConnect()">Connect</button>
+      </div>
+
+      <div style="font-size:13px; color:var(--muted); display:flex; align-items:center;">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">ยังไม่ได้เชื่อมต่อ</span>
+      </div>
+
+      <div id="savedPortInfo" style="font-size:11px; color:#3b82f6; margin-top:6px; display:none;">
+        📌 จำ Port จาก session ก่อน — คลิก Connect เพื่อเชื่อมต่อใหม่
+      </div>
+    </div>
+
+    <!-- Values Card -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title">ค่าความดันที่จะส่ง</div>
+
+      <!-- Presets -->
+      <div style="font-size:11px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px;">⚡ Preset Scenarios</div>
+      <div class="preset-grid" id="presetGrid">
+        <button class="preset-btn" onclick="applyPreset('normal')">
+          <span class="pb-name">🟢 Normal</span>
+          <span class="pb-val">120/80  PR 75</span>
+        </button>
+        <button class="preset-btn" onclick="applyPreset('elevated')">
+          <span class="pb-name">🟡 Elevated</span>
+          <span class="pb-val">128/82  PR 80</span>
+        </button>
+        <button class="preset-btn" onclick="applyPreset('htn1')">
+          <span class="pb-name">🟠 HTN I</span>
+          <span class="pb-val">142/92  PR 85</span>
+        </button>
+        <button class="preset-btn" onclick="applyPreset('htn2')">
+          <span class="pb-name">🔴 HTN II</span>
+          <span class="pb-val">165/105 PR 92</span>
+        </button>
+        <button class="preset-btn" onclick="applyPreset('low')">
+          <span class="pb-name">🔵 Low BP</span>
+          <span class="pb-val">88/58   PR 100</span>
+        </button>
+        <button class="preset-btn" onclick="applyPreset('crisis')">
+          <span class="pb-name">🚨 Crisis</span>
+          <span class="pb-val">190/120 PR 110</span>
+        </button>
+      </div>
+
+      <!-- Vital inputs -->
+      <div class="vitals-grid">
+        <div class="vital-card sys">
+          <div class="vital-label">Systolic</div>
+          <input class="vital-input" type="number" id="valSys" value="120" min="60" max="250" oninput="clearPreset();updatePreview()">
+          <div class="vital-unit">mmHg</div>
+        </div>
+        <div class="vital-card dia">
+          <div class="vital-label">Diastolic</div>
+          <input class="vital-input" type="number" id="valDia" value="80" min="40" max="150" oninput="clearPreset();updatePreview()">
+          <div class="vital-unit">mmHg</div>
+        </div>
+        <div class="vital-card map">
+          <div class="vital-label">MAP (auto)</div>
+          <input class="vital-input" type="number" id="valMap" value="93" min="50" max="180" oninput="updatePreview()">
+          <div class="vital-unit">mmHg</div>
+        </div>
+        <div class="vital-card pulse">
+          <div class="vital-label">Pulse</div>
+          <input class="vital-input" type="number" id="valPulse" value="75" min="30" max="200" oninput="clearPreset();updatePreview()">
+          <div class="vital-unit">bpm</div>
+        </div>
+      </div>
+
+      <div class="id-row">
+        <label>Device ID:</label>
+        <input type="text" id="deviceId" value="000000000" maxlength="9" style="font-family:var(--mono); font-size:13px;" oninput="updatePreview()">
+      </div>
+
+      <!-- Random Range section -->
+      <div class="section-toggle" id="rangeToggle" onclick="toggleRangePanel()">
+        <span style="font-size:11px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.06em;">🎲 ตั้งค่าช่วงสุ่ม</span>
+        <span class="arrow">▼</span>
+      </div>
+      <div class="range-panel" id="rangePanel" style="display:none;">
+        <div class="range-row">
+          <span class="range-label">SYS</span>
+          <input type="number" id="rSysMin" value="105" min="60"  max="250" placeholder="Min">
+          <input type="number" id="rSysMax" value="155" min="60"  max="250" placeholder="Max">
+        </div>
+        <div class="range-row">
+          <span class="range-label">DIA</span>
+          <input type="number" id="rDiaMin" value="65"  min="40"  max="150" placeholder="Min">
+          <input type="number" id="rDiaMax" value="100" min="40"  max="150" placeholder="Max">
+        </div>
+        <div class="range-row">
+          <span class="range-label">Pulse</span>
+          <input type="number" id="rPulseMin" value="55"  min="30" max="200" placeholder="Min">
+          <input type="number" id="rPulseMax" value="100" min="30" max="200" placeholder="Max">
+        </div>
+      </div>
+
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-ghost" onclick="randomize()" style="flex:1;">
+          🎲 สุ่มค่า
+        </button>
+        <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); cursor:pointer; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:0 12px;">
+          <input type="checkbox" id="autoRandCheck" style="accent-color:var(--green); width:14px; height:14px;"> สุ่มทุกครั้งที่ส่ง
+        </label>
+      </div>
+    </div>
+
+    <!-- Frame Preview -->
+    <div class="card">
+      <div class="card-title">Frame Preview (R1)</div>
+      <div class="frame-preview" id="framePreview">—</div>
+
+      <div class="send-row">
+        <button class="btn btn-green" id="sendOnceBtn" onclick="sendOnce()" disabled style="flex:1;">
+          ▶ Send Once
+        </button>
+        <button class="btn btn-ghost" onclick="randomize(); sendOnce();" id="randSendBtn" disabled>
+          🎲 Random &amp; Send
+        </button>
+      </div>
+
+      <div class="auto-row">
+        <label class="toggle">
+          <input type="checkbox" id="autoToggle" onchange="toggleAuto()" disabled>
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </label>
+        <span>Auto-send ทุก</span>
+        <input type="number" id="autoInterval" value="10" min="1" max="300">
+        <span>วินาที</span>
+        <div class="sending-indicator" id="sendingIndicator">
+          <div class="pulse-dot"></div> กำลังส่ง...
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Terminal -->
+  <div class="card" style="display:flex; flex-direction:column;">
+    <div class="term-header">
+      <div class="card-title" style="margin-bottom:0;">Terminal Log</div>
+      <button class="btn btn-ghost" onclick="clearLog()" style="padding:5px 12px; font-size:12px;">Clear</button>
+    </div>
+    <div class="terminal" id="terminal"></div>
+  </div>
+
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// State
+// ─────────────────────────────────────────────
+let port = null;
+let writer = null;
+let autoTimer = null;
+
+const LS_BAUD = 'bpsim_baud';
+
+// Restore saved settings
+(function restoreSettings() {
+  const savedBaud = localStorage.getItem(LS_BAUD);
+  if (savedBaud) {
+    document.getElementById('baudRate').value = savedBaud;
+  }
+  // Check if there was a previous port (informational only — Web Serial can't auto-reconnect)
+  const hadPort = localStorage.getItem('bpsim_hadPort');
+  if (hadPort) {
+    document.getElementById('savedPortInfo').style.display = 'block';
+  }
+  updatePreview();
+})();
+
+// Save baud on change
+document.getElementById('baudRate').addEventListener('change', () => {
+  localStorage.setItem(LS_BAUD, document.getElementById('baudRate').value);
+});
+
+// Auto-calc MAP when sys/dia change
+['valSys','valDia'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => {
+    const sys = parseInt(document.getElementById('valSys').value) || 0;
+    const dia = parseInt(document.getElementById('valDia').value) || 0;
+    const map = Math.round((sys + 2 * dia) / 3);
+    document.getElementById('valMap').value = map;
+    // Don't call updatePreview again here; oninput on the fields already calls it
+  });
+});
+
+// ─────────────────────────────────────────────
+// Frame Builder (Terumo R1 format)
+// ─────────────────────────────────────────────
+function buildFrame() {
+  const sys   = parseInt(document.getElementById('valSys').value)   || 0;
+  const dia   = parseInt(document.getElementById('valDia').value)   || 0;
+  const map   = parseInt(document.getElementById('valMap').value)   || 0;
+  const pulse = parseInt(document.getElementById('valPulse').value) || 0;
+  const devId = (document.getElementById('deviceId').value || '000000000').padStart(9,'0').slice(0,9);
+
+  const now  = new Date();
+  const yy   = String(now.getFullYear()).slice(2);
+  const mm   = String(now.getMonth()+1).padStart(2,'0');
+  const dd   = String(now.getDate()).padStart(2,'0');
+  const hh   = String(now.getHours()).padStart(2,'0');
+  const mi   = String(now.getMinutes()).padStart(2,'0');
+  const ss   = String(now.getSeconds()).padStart(2,'0');
+
+  const date = yy + mm + dd;
+  const time = hh + mi + ss;
+
+  const sysStr   = String(sys).padStart(3,'0');
+  const mapStr   = String(map).padStart(3,'0');
+  const diaStr   = String(dia).padStart(3,'0');
+  const pulseStr = String(pulse).padStart(3,'0');
+
+  // R1,ID,YYMMDD,HHMMSS,SYS,MAP,DIA,PULSE,0000,0000,00000,000
+  const body = `R1,${devId},${date},${time},${sysStr},${mapStr},${diaStr},${pulseStr},0000,0000,00000,000`;
+
+  // Wrap: STX + body + ETX
+  const enc   = new TextEncoder();
+  const inner = new Uint8Array([0x02, ...enc.encode(body), 0x03]);
+
+  // BCC = sum of all bytes (including STX and ETX) & 0xFF
+  let sum = 0;
+  for (const b of inner) sum += b;
+  const bcc = sum & 0xFF;
+
+  const frame = new Uint8Array([...inner, bcc]);
+  return { frame, body, bcc };
+}
+
+function updatePreview() {
+  const { frame, body, bcc } = buildFrame();
+  const hexStr = Array.from(frame).map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' ');
+
+  const previewEl = document.getElementById('framePreview');
+  previewEl.innerHTML =
+    `<span class="stx">&lt;STX&gt;</span>` +
+    `<span class="data">${escHtml(body)}</span>` +
+    `<span class="etx">&lt;ETX&gt;</span>` +
+    `<span class="bcc"> [BCC: ${bcc.toString(16).toUpperCase().padStart(2,'0')}]</span>\n` +
+    `<span class="hex">HEX: ${hexStr}</span>`;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ─────────────────────────────────────────────
+// Serial
+// ─────────────────────────────────────────────
+async function toggleConnect() {
+  if (port) {
+    await doDisconnect();
+  } else {
+    await doConnect();
+  }
+}
+
+async function doConnect() {
+  if (!navigator.serial) {
+    log('⚠ Web Serial API ไม่รองรับใน browser นี้ — ใช้ Chrome/Edge', 'err');
+    return;
+  }
+  try {
+    port = await navigator.serial.requestPort();
+    const baud = parseInt(document.getElementById('baudRate').value);
+    await port.open({ baudRate: baud, dataBits: 8, stopBits: 1, parity: 'none' });
+
+    writer = port.writable.getWriter();
+
+    setConnected(true);
+    localStorage.setItem(LS_BAUD, baud);
+    localStorage.setItem('bpsim_hadPort', '1');
+    document.getElementById('savedPortInfo').style.display = 'none';
+    log(`--- Port Opened (${baud} bps) ---`, 'info');
+  } catch (e) {
+    log(`Error: ${e.message}`, 'err');
+    setConnected(false);
+    port = null;
+  }
+}
+
+async function doDisconnect() {
+  // Stop auto first
+  if (autoTimer) {
+    clearInterval(autoTimer);
+    autoTimer = null;
+    document.getElementById('autoToggle').checked = false;
+    document.getElementById('sendingIndicator').classList.remove('active');
+  }
+  try {
+    if (writer) { writer.releaseLock(); writer = null; }
+    if (port)   { await port.close(); port = null; }
+  } catch(e) {}
+  setConnected(false);
+  log('--- Port Closed ---', 'info');
+}
+
+function setConnected(yes) {
+  const dot  = document.getElementById('statusDot');
+  const txt  = document.getElementById('statusText');
+  const btn  = document.getElementById('connectBtn');
+  const sBtn = document.getElementById('sendOnceBtn');
+  const rBtn = document.getElementById('randSendBtn');
+  const aTog = document.getElementById('autoToggle');
+
+  if (yes) {
+    dot.className  = 'status-dot connected';
+    txt.textContent = `เชื่อมต่อแล้ว — ${document.getElementById('baudRate').value} bps`;
+    btn.textContent = 'Disconnect';
+    btn.className   = 'btn btn-danger';
+    sBtn.disabled   = false;
+    rBtn.disabled   = false;
+    aTog.disabled   = false;
+  } else {
+    dot.className   = 'status-dot';
+    txt.textContent = 'ยังไม่ได้เชื่อมต่อ';
+    btn.textContent = 'Connect';
+    btn.className   = 'btn btn-primary';
+    sBtn.disabled   = true;
+    rBtn.disabled   = true;
+    aTog.disabled   = true;
+  }
+}
+
+// ─────────────────────────────────────────────
+// Send
+// ─────────────────────────────────────────────
+async function sendOnce() {
+  if (!writer) return;
+  // Auto-randomize if checked
+  if (document.getElementById('autoRandCheck').checked) randomize();
+  const { frame, body } = buildFrame();
+  try {
+    await writer.write(frame);
+    const hexStr = Array.from(frame).map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' ');
+    log(`${body} [HEX: ${hexStr}]`, 'tx');
+  } catch(e) {
+    log(`Send Error: ${e.message}`, 'err');
+  }
+}
+
+function toggleAuto() {
+  const on = document.getElementById('autoToggle').checked;
+  const ind = document.getElementById('sendingIndicator');
+
+  if (on) {
+    const sec = Math.max(1, parseFloat(document.getElementById('autoInterval').value) || 10);
+    sendOnce(); // send immediately
+    autoTimer = setInterval(sendOnce, sec * 1000);
+    ind.classList.add('active');
+  } else {
+    if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+    ind.classList.remove('active');
+  }
+}
+
+function randInt(min, max) {
+  min = parseInt(min); max = parseInt(max);
+  if (min > max) [min, max] = [max, min];
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function randomize() {
+  const sys   = randInt(
+    document.getElementById('rSysMin').value,
+    document.getElementById('rSysMax').value
+  );
+  const dia   = randInt(
+    document.getElementById('rDiaMin').value,
+    document.getElementById('rDiaMax').value
+  );
+  const pulse = randInt(
+    document.getElementById('rPulseMin').value,
+    document.getElementById('rPulseMax').value
+  );
+  const map = Math.round((sys + 2 * dia) / 3);
+
+  document.getElementById('valSys').value   = sys;
+  document.getElementById('valDia').value   = dia;
+  document.getElementById('valMap').value   = map;
+  document.getElementById('valPulse').value = pulse;
+  clearPreset();
+  updatePreview();
+}
+
+// Presets
+const PRESETS = {
+  normal:   { sys: 120, dia: 80,  pulse: 75,  label: 'Normal' },
+  elevated: { sys: 128, dia: 82,  pulse: 80,  label: 'Elevated' },
+  htn1:     { sys: 142, dia: 92,  pulse: 85,  label: 'HTN I' },
+  htn2:     { sys: 165, dia: 105, pulse: 92,  label: 'HTN II' },
+  low:      { sys: 88,  dia: 58,  pulse: 100, label: 'Low BP' },
+  crisis:   { sys: 190, dia: 120, pulse: 110, label: 'Crisis' },
+};
+
+function applyPreset(key) {
+  const p = PRESETS[key];
+  if (!p) return;
+  document.getElementById('valSys').value   = p.sys;
+  document.getElementById('valDia').value   = p.dia;
+  document.getElementById('valMap').value   = Math.round((p.sys + 2 * p.dia) / 3);
+  document.getElementById('valPulse').value = p.pulse;
+  updatePreview();
+  // Highlight active preset
+  document.querySelectorAll('.preset-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', Object.keys(PRESETS)[i] === key);
+  });
+}
+
+function clearPreset() {
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+}
+
+function toggleRangePanel() {
+  const panel  = document.getElementById('rangePanel');
+  const toggle = document.getElementById('rangeToggle');
+  const open   = panel.style.display === 'none';
+  panel.style.display = open ? 'block' : 'none';
+  toggle.classList.toggle('open', open);
+}
+
+// ─────────────────────────────────────────────
+// Terminal
+// ─────────────────────────────────────────────
+function log(msg, type = 'info') {
+  const term = document.getElementById('terminal');
+  const time = new Date().toLocaleTimeString('en-GB');
+  const div  = document.createElement('div');
+
+  if (type === 'tx') {
+    div.className = 'tx';
+    div.textContent = `[${time}] -> ${msg}`;
+  } else if (type === 'err') {
+    div.className = 'err';
+    div.textContent = `[${time}] !! ${msg}`;
+  } else {
+    div.className = 'info';
+    div.textContent = `[${time}] -- ${msg}`;
+  }
+
+  term.appendChild(div);
+  term.scrollTop = term.scrollHeight;
+}
+
+function clearLog() {
+  document.getElementById('terminal').innerHTML = '';
+}
+
+// Init preview
+updatePreview();
+</script>
+</body>
+</html>

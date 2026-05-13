@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python terumo_reader.py)",
+      "PowerShell(Get-Process python -ErrorAction SilentlyContinue)",
+      "PowerShell(python \"c:\\\\Users\\\\Lenovo\\\\Documents\\\\App_dev\\\\test_terumo\\\\terumo_reader.py\")",
+      "PowerShell(python -c \"import serial; print\\(serial.__version__\\)\")",
+      "Bash(python -c \"import terumo_reader\")",
+      "PowerShell(Get-Process python,pythonw -ErrorAction SilentlyContinue)",
+      "PowerShell(Stop-Process -Force)"
+    ]
+  }
+}

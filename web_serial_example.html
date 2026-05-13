@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal BP Monitor Reader</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --success: #16a34a;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+        }
+        body { 
+            font-family: 'Segoe UI', system-ui, sans-serif; 
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+        .card {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+        .header-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        select, input, button {
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            font-size: 14px;
+        }
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: opacity 0.2s;
+        }
+        button:hover { opacity: 0.9; }
+        button.danger { background: #dc2626; }
+        
+        .vitals-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .vital-box {
+            background: #f0fdf4;
+            border: 2px solid #bbf7d0;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        .vital-box h3 { margin: 0 0 10px 0; color: #166534; font-size: 14px; }
+        .vital-box .value { font-size: 36px; font-weight: bold; color: #15803d; margin: 0; }
+        
+        .terminal {
+            background: #0f172a;
+            color: #4ade80;
+            font-family: 'Consolas', monospace;
+            padding: 15px;
+            border-radius: 8px;
+            height: 300px;
+            overflow-y: auto;
+            font-size: 13px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .terminal .tx { color: #60a5fa; }
+        .terminal .hex { color: #94a3b8; font-size: 11px; margin-left: 10px; }
+        
+        .send-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .send-controls input { flex: 1; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="card">
+        <h2 style="margin-top:0;">Universal BP Monitor Reader</h2>
+        <p style="color: #64748b;">ระบบเชื่อมต่อและวิเคราะห์ข้อมูลจากเครื่องวัดความดันแบบใหม่ทั้งหมด (Raw Data Analyzer)</p>
+        
+        <div class="header-controls">
+            <select id="baudRate">
+                <option value="9600">9600 bps</option>
+                <option value="19200" selected>19200 bps</option>
+                <option value="38400">38400 bps</option>
+                <option value="115200">115200 bps</option>
+            </select>
+            <button id="connectBtn">Connect Serial Port</button>
+            <span id="status" style="color: #64748b; font-weight: 500;">รอการเชื่อมต่อ...</span>
+        </div>
+
+        <div class="vitals-grid">
+            <div class="vital-box">
+                <h3>SYSTOLIC (mmHg)</h3>
+                <p class="value" id="val-sys">---</p>
+            </div>
+            <div class="vital-box">
+                <h3>DIASTOLIC (mmHg)</h3>
+                <p class="value" id="val-dia">---</p>
+            </div>
+            <div class="vital-box">
+                <h3>PULSE (bpm)</h3>
+                <p class="value" id="val-pulse">---</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h3 style="margin: 0;">Data Terminal (Log)</h3>
+            <button onclick="document.getElementById('terminal').innerHTML = ''" style="padding: 5px 10px; font-size: 12px;">Clear Log</button>
+        </div>
+        <div class="terminal" id="terminal"></div>
+        
+        <div class="send-controls">
+            <select id="sendType">
+                <option value="text">Text (String)</option>
+                <option value="hex">Hex (e.g. 02 44 31 2C 03 A6)</option>
+            </select>
+            <input type="text" id="sendInput" placeholder="พิมพ์ข้อความ หรือ Hex code ที่นี่..." onkeypress="if(event.key === 'Enter') sendManual()">
+            <button onclick="sendManual()">Send</button>
+        </div>
+        <div style="margin-top: 10px; font-size: 13px; color: #64748b; display: flex; align-items: center; gap: 8px;">
+            <label><input type="checkbox" id="autoReplyEnable" checked> ตอบกลับอัตโนมัติเมื่อพบ "R1"</label>
+            <select id="autoReplyType" style="padding: 4px; font-size: 12px; border-radius: 4px;">
+                <option value="D1">D1 frame</option>
+                <option value="D0">D0 frame</option>
+                <option value="G1">G1 frame</option>
+                <option value="S1">S1 frame</option>
+                <option value="R2">R2 frame</option>
+                <option value="ACK">ACK (0x06)</option>
+                <option value="NAK">NAK (0x15)</option>
+                <option value="ENQ">ENQ (0x05)</option>
+                <option value="R1">R1 echo (สะท้อน R1 กลับ)</option>
+                <option value="CRLF">CRLF (\\r\\n)</option>
+                <option value="OK_CRLF">OK CRLF</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<script>
+    let port;
+    let reader;
+    let writer;
+    let bufferString = ""; // เก็บข้อความสะสมเพื่อหาค่าความดัน
+
+    const connectBtn = document.getElementById('connectBtn');
+    const statusEl = document.getElementById('status');
+    const terminal = document.getElementById('terminal');
+
+    function printLog(text, isTx = false, hexArray = null) {
+        const div = document.createElement('div');
+        const time = new Date().toLocaleTimeString('en-GB');
+        
+        let hexStr = "";
+        if (hexArray) {
+            hexStr = `<span class="hex">[HEX: ${Array.from(hexArray).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ')}]</span>`;
+        }
+
+        // แทนที่ตัวอักษรพิเศษให้มองเห็นได้
+        const safeText = text.replace(/\x02/g, '<STX>').replace(/\x03/g, '<ETX>').replace(/\x06/g, '<ACK>').replace(/\r/g, '\\r').replace(/\n/g, '\\n');
+
+        if (isTx) {
+            div.className = 'tx';
+            div.innerHTML = `[${time}] -> ${safeText} ${hexStr}`;
+        } else {
+            div.innerHTML = `[${time}] <- ${safeText} ${hexStr}`;
+        }
+        
+        terminal.appendChild(div);
+        terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    connectBtn.addEventListener('click', async () => {
+        if (port) {
+            await disconnect();
+            return;
+        }
+
+        try {
+            port = await navigator.serial.requestPort();
+            const baudRate = parseInt(document.getElementById('baudRate').value);
+            await port.open({ baudRate: baudRate, dataBits: 8, stopBits: 1, parity: "none" });
+            
+            writer = port.writable.getWriter();
+            connectBtn.textContent = 'Disconnect';
+            connectBtn.classList.add('danger');
+            statusEl.textContent = `เชื่อมต่อแล้ว (${baudRate} bps)`;
+            printLog("--- Port Opened ---");
+
+            readLoop();
+        } catch (err) {
+            printLog(`Error: ${err.message}`);
+            statusEl.textContent = "เชื่อมต่อล้มเหลว";
+        }
+    });
+
+    async function disconnect() {
+        if (reader) await reader.cancel();
+        if (writer) { writer.releaseLock(); writer = null; }
+        if (port) { await port.close(); port = null; }
+        
+        connectBtn.textContent = 'Connect Serial Port';
+        connectBtn.classList.remove('danger');
+        statusEl.textContent = "ยกเลิกการเชื่อมต่อแล้ว";
+        printLog("--- Port Closed ---");
+    }
+
+    async function readLoop() {
+        reader = port.readable.getReader();
+        try {
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+
+                // 1. Log Raw Data
+                const textChunk = new TextDecoder("ascii").decode(value);
+                printLog(textChunk, false, value);
+
+                // 2. สะสมข้อความเพื่อวิเคราะห์หาค่าความดัน
+                bufferString += textChunk;
+
+                // 3. Auto-Reply ถ้าเครื่องส่ง R1 มา
+                if (document.getElementById('autoReplyEnable').checked && bufferString.includes("R1")) {
+                    const replyType = document.getElementById('autoReplyType').value;
+                    if (replyType === "ACK") {
+                        sendData(new Uint8Array([0x06]), "ACK");
+                    } else if (replyType === "NAK") {
+                        sendData(new Uint8Array([0x15]), "NAK");
+                    } else if (replyType === "ENQ") {
+                        sendData(new Uint8Array([0x05]), "ENQ");
+                    } else if (replyType === "CRLF") {
+                        sendData(new Uint8Array([0x0D, 0x0A]), "CRLF");
+                    } else if (replyType === "OK_CRLF") {
+                        sendData(new Uint8Array([0x4F, 0x4B, 0x0D, 0x0A]), "OK CRLF");
+                    } else {
+                        // Build STX + CMD + ETX + BCC for D1, D0, G1, S1, R2, R1
+                        const body = new TextEncoder().encode(replyType + ",");
+                        let inner = new Uint8Array(1 + body.length + 1);
+                        inner[0] = 0x02; // STX
+                        inner.set(body, 1);
+                        inner[inner.length - 1] = 0x03; // ETX
+                        
+                        let sum = 0;
+                        for (let j = 0; j < inner.length; j++) sum += inner[j];
+                        let bcc = sum & 0xFF;
+                        
+                        let frame = new Uint8Array(inner.length + 1);
+                        frame.set(inner);
+                        frame[frame.length - 1] = bcc;
+                        
+                        sendData(frame, replyType + " frame");
+                    }
+                    bufferString = bufferString.replace("R1", "R1_ACKED"); // เคลียร์ R1 ออกจากการจับซ้ำ แต่คงโครงสร้างไว้
+                }
+
+                // 4. พยายามค้นหาค่าจากข้อความที่สะสมไว้
+                parseVitals();
+
+                // ป้องกันบัฟเฟอร์ล้น (เก็บแค่ 1000 ตัวอักษรล่าสุด)
+                if (bufferString.length > 1000) {
+                    bufferString = bufferString.slice(-500);
+                }
+            }
+        } catch (error) {
+            printLog(`Read error: ${error}`);
+        } finally {
+            reader.releaseLock();
+        }
+    }
+
+    function parseVitals() {
+        // ค้นหาค่าแบบยืดหยุ่น 
+        
+        // 1. รูปแบบ Terumo: R1, ID, Date, Time, SYS, MAP, DIA, PR, ...
+        // ตัวอย่าง: R1,000000000,260429,103800,119,090,076,083,0000,0000,00000,000
+        // ลำดับคือ SYS (119), MAP (090), DIA (076), PULSE (083)
+        let terumoMatch = bufferString.match(/R1(?:_ACKED)?,[^,]*,[^,]*,[^,]*,(\d{2,3}),(?:\d{2,3}),(\d{2,3}),(\d{2,3}),/);
+        
+        // 2. ค้นหาคีย์เวิร์ด SYS, DIA, PULSE แบบทั่วไป
+        let sysMatch = bufferString.match(/(?:SYSTOLIC|SYS)[^\d]*(\d{2,3})/i);
+        let diaMatch = bufferString.match(/(?:DIASTOLIC|DIA)[^\d]*(\d{2,3})/i);
+        let pulseMatch = bufferString.match(/(?:PULSE|PR|BPM)[^\d]*(\d{2,3})/i);
+
+        let updated = false;
+
+        if (terumoMatch) {
+            document.getElementById('val-sys').textContent = parseInt(terumoMatch[1], 10);
+            document.getElementById('val-dia').textContent = parseInt(terumoMatch[2], 10);
+            document.getElementById('val-pulse').textContent = parseInt(terumoMatch[3], 10);
+            updated = true;
+        } else {
+            if (sysMatch) {
+                document.getElementById('val-sys').textContent = parseInt(sysMatch[1], 10);
+                updated = true;
+            }
+            if (diaMatch) {
+                document.getElementById('val-dia').textContent = parseInt(diaMatch[1], 10);
+                updated = true;
+            }
+            if (pulseMatch) {
+                document.getElementById('val-pulse').textContent = parseInt(pulseMatch[1], 10);
+                updated = true;
+            }
+        }
+
+        if (updated) {
+            // ถ้าเจอค่าและอัปเดตหน้าจอแล้ว ให้เคลียร์บัฟเฟอร์ เพื่อรอรับค่าใหม่รอบหน้า
+            bufferString = ""; 
+        } else {
+            // Fallback: ถ้าหา keyword ไม่เจอเลย แต่มีตัวเลขเรียงกัน 3 ชุด ลองสุ่มจับ
+            // เฉพาะในกรณีที่ข้อความยาวพอสมควรและมีเว้นบรรทัด \n แล้ว
+            if (bufferString.includes("\n") && bufferString.match(/\d+/g)?.length >= 3) {
+                 const nums = bufferString.match(/\d+/g).map(Number).filter(n => n >= 30 && n <= 250);
+                 if (nums.length >= 3) {
+                     // สมมติฐาน: 3 ตัวสุดท้ายน่าจะเป็น Sys, Dia, Pulse
+                     document.getElementById('val-sys').textContent = nums[nums.length-3];
+                     document.getElementById('val-dia').textContent = nums[nums.length-2];
+                     document.getElementById('val-pulse').textContent = nums[nums.length-1];
+                     bufferString = ""; // เคลียร์
+                 }
+            }
+        }
+    }
+
+    async function sendData(uint8Array, label) {
+        if (!writer) return;
+        try {
+            await writer.write(uint8Array);
+            printLog(label || new TextDecoder("ascii").decode(uint8Array), true, uint8Array);
+        } catch (err) {
+            printLog(`Send Error: ${err.message}`);
+        }
+    }
+
+    function sendManual() {
+        const type = document.getElementById('sendType').value;
+        const input = document.getElementById('sendInput').value.trim();
+        if (!input) return;
+
+        if (type === 'text') {
+            const data = new TextEncoder().encode(input + "\r\n");
+            sendData(data, input + "\\r\\n");
+        } else {
+            // Parse Hex string like "02 44 31 2C 03 A6"
+            try {
+                const hexParts = input.split(/[\s,]+/).filter(x => x.length > 0);
+                const bytes = new Uint8Array(hexParts.map(h => parseInt(h, 16)));
+                sendData(bytes, "<HEX DATA>");
+            } catch (e) {
+                alert("รูปแบบ Hex ไม่ถูกต้อง (ตัวอย่าง: 02 06 03)");
+            }
+        }
+        document.getElementById('sendInput').value = '';
+    }
+</script>
+</body>
+</html>

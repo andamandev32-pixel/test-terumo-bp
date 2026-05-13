@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480">
+    <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#3b82f6"/>
+        </marker>
+        <marker id="arrow-reply" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981"/>
+        </marker>
+        <style>
+            .box { fill: #1e293b; stroke: #3b82f6; stroke-width: 2; rx: 8; }
+            .box-reader { fill: #1e293b; stroke: #10b981; stroke-width: 2; rx: 8; }
+            .text-title { fill: #f8fafc; font-family: 'Segoe UI', sans-serif; font-size: 16px; font-weight: bold; text-anchor: middle; }
+            .text-desc { fill: #94a3b8; font-family: 'Segoe UI', sans-serif; font-size: 12px; text-anchor: middle; }
+            .text-step { fill: #e2e8f0; font-family: 'Segoe UI', sans-serif; font-size: 14px; font-weight: 500; }
+            .line-conn { stroke: #3b82f6; stroke-width: 2; marker-end: url(#arrow); fill: none; }
+            .line-reply { stroke: #10b981; stroke-width: 2; stroke-dasharray: 5,5; marker-end: url(#arrow-reply); fill: none; }
+            .bg { fill: #0f172a; }
+            .port { fill: #334155; rx: 4; }
+            .port-text { fill: #cbd5e1; font-family: monospace; font-size: 13px; text-anchor: middle; }
+            .highlight { fill: #38bdf8; font-family: monospace; font-size: 12px; }
+        </style>
+    </defs>
+    
+    <rect width="100%" height="100%" class="bg" rx="12" />
+
+    <!-- Title -->
+    <text x="400" y="35" class="text-title" style="font-size: 18px; fill: #e2e8f0;">Web Serial Integration Data Flow</text>
+
+    <!-- Simulator Box -->
+    <rect x="40" y="60" width="310" height="390" class="box" />
+    <text x="195" y="90" class="text-title">bp_simulator.html</text>
+    <text x="195" y="110" class="text-desc">(Sender / Emulator)</text>
+
+    <rect x="250" y="130" width="80" height="30" class="port" />
+    <text x="290" y="150" class="port-text">COM8</text>
+
+    <!-- Reader Box -->
+    <rect x="450" y="60" width="310" height="390" class="box-reader" />
+    <text x="605" y="90" class="text-title">web_serial_example.html</text>
+    <text x="605" y="110" class="text-desc">(Reader / Analyzer)</text>
+
+    <rect x="470" y="130" width="80" height="30" class="port" />
+    <text x="510" y="150" class="port-text">COM9</text>
+
+    <!-- Steps in Simulator -->
+    <text x="60" y="170" class="text-step">1. User input vitals / Randomize</text>
+    <text x="60" y="200" class="text-step">2. Trigger Send (Once / Auto)</text>
+    
+    <text x="60" y="240" class="text-step">3. buildFrame()</text>
+    <text x="80" y="260" class="highlight" text-anchor="start">STX + "R1,..." + ETX + BCC</text>
+
+    <text x="60" y="310" class="text-step">4. Write Byte Array</text>
+    <text x="80" y="330" class="highlight" text-anchor="start">writer.write(uint8Array)</text>
+
+    <!-- Communication Lines -->
+    <!-- TX -> RX -->
+    <path d="M 350 305 L 450 305" class="line-conn" />
+    <text x="400" y="295" class="text-desc" style="fill: #3b82f6; font-weight: bold;">Web Serial API</text>
+    <text x="400" y="320" class="text-desc">(TX -> RX)</text>
+
+    <!-- Auto-reply -->
+    <path d="M 450 365 L 350 365" class="line-reply" />
+    <text x="400" y="355" class="text-desc" style="fill:#10b981; font-weight: bold;">Auto-Reply</text>
+    <text x="400" y="380" class="text-desc" style="fill:#10b981;">(e.g., 0x06 ACK)</text>
+
+    <!-- Steps in Reader -->
+    <text x="470" y="170" class="text-step">5. Read Loop (Chunks)</text>
+    <text x="490" y="190" class="highlight" text-anchor="start">bufferString += chunk</text>
+
+    <text x="470" y="230" class="text-step">6. Auto-Reply Trigger</text>
+    <text x="490" y="250" class="highlight" text-anchor="start">if buffer includes "R1"</text>
+    <text x="490" y="270" class="highlight" text-anchor="start">-> replace with "R1_ACKED"</text>
+
+    <text x="470" y="310" class="text-step">7. parseVitals()</text>
+    <text x="490" y="330" class="highlight" text-anchor="start">Regex match SYS, DIA, PULSE</text>
+
+    <text x="470" y="370" class="text-step">8. Update DOM (UI Dashboard)</text>
+
+    <text x="470" y="410" class="text-step">9. Clear Buffer</text>
+    <text x="490" y="430" class="highlight" text-anchor="start">bufferString = ""</text>
+
+</svg>

@@ -1,0 +1,68 @@
+<svg width="900" height="550" viewBox="0 0 900 550" xmlns="http://www.w3.org/2000/svg" style="font-family: 'Segoe UI', sans-serif;">
+  <defs>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-opacity="0.1"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="100%" height="100%" fill="#f8fafc"/>
+
+  <!-- Title -->
+  <text x="450" y="40" font-size="24" font-weight="bold" text-anchor="middle" fill="#1e293b">Terumo Simulator &amp; Android Integration Workflow</text>
+  <text x="450" y="65" font-size="14" text-anchor="middle" fill="#64748b">แผนภาพแสดงการเชื่อมต่อเพื่อจำลองและนำไปใช้งานในการพัฒนาแอปพลิเคชัน</text>
+
+  <!-- Lines -->
+  <!-- Sim to Bridge -->
+  <path d="M 250 250 L 350 250" stroke="#64748b" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+  <text x="300" y="240" font-size="12" text-anchor="middle" fill="#64748b">R1 Frame</text>
+
+  <!-- Bridge to Reader -->
+  <path d="M 550 250 C 600 250, 600 130, 650 130" stroke="#64748b" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+  
+  <!-- Bridge to Emulator -->
+  <path d="M 550 250 L 650 250" stroke="#64748b" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- Bridge to Device -->
+  <path d="M 550 250 C 600 250, 600 370, 650 370" stroke="#64748b" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- Simulator Node -->
+  <rect x="50" y="200" width="200" height="100" rx="12" fill="#eff6ff" stroke="#3b82f6" stroke-width="2" filter="url(#shadow)"/>
+  <text x="150" y="235" font-size="18" font-weight="bold" text-anchor="middle" fill="#1e3a8a">Terumo Simulator</text>
+  <text x="150" y="260" font-size="14" text-anchor="middle" fill="#1d4ed8">terumo_simulator.exe</text>
+  <text x="150" y="280" font-size="12" text-anchor="middle" fill="#3b82f6">(Port: COM3)</text>
+
+  <!-- Virtual COM Bridge Node -->
+  <rect x="350" y="190" width="200" height="120" rx="12" fill="#fefce8" stroke="#eab308" stroke-width="2" filter="url(#shadow)"/>
+  <text x="450" y="225" font-size="16" font-weight="bold" text-anchor="middle" fill="#854d0e">Virtual COM Bridge</text>
+  <text x="450" y="250" font-size="13" text-anchor="middle" fill="#a16207">HHD Virtual Serial Port</text>
+  <text x="450" y="275" font-size="14" font-weight="bold" text-anchor="middle" fill="#ca8a04">COM3 ↔ COM4</text>
+  <text x="450" y="295" font-size="11" text-anchor="middle" fill="#eab308">(เชื่อมต่อพอร์ตเสมือน)</text>
+
+  <!-- Reader Node -->
+  <rect x="650" y="90" width="220" height="80" rx="12" fill="#f0fdf4" stroke="#22c55e" stroke-width="2" filter="url(#shadow)"/>
+  <text x="760" y="125" font-size="16" font-weight="bold" text-anchor="middle" fill="#14532d">Terumo Reader</text>
+  <text x="760" y="150" font-size="12" text-anchor="middle" fill="#16a34a">เชื่อมต่อที่ COM4 เพื่อทดสอบ</text>
+
+  <!-- Emulator Node -->
+  <rect x="650" y="210" width="220" height="80" rx="12" fill="#fff7ed" stroke="#f97316" stroke-width="2" filter="url(#shadow)"/>
+  <text x="760" y="245" font-size="16" font-weight="bold" text-anchor="middle" fill="#7c2d12">Android Emulator</text>
+  <text x="760" y="270" font-size="12" text-anchor="middle" fill="#ea580c">รันด้วย -qemu -serial COM4</text>
+
+  <!-- Physical Device Node -->
+  <rect x="650" y="330" width="220" height="120" rx="12" fill="#fff7ed" stroke="#f97316" stroke-width="2" filter="url(#shadow)"/>
+  <text x="760" y="360" font-size="16" font-weight="bold" text-anchor="middle" fill="#7c2d12">Android Physical Device</text>
+  <text x="760" y="385" font-size="12" text-anchor="middle" fill="#ea580c">ต่อผ่านสาย USB-OTG + RS232</text>
+  <text x="760" y="405" font-size="12" text-anchor="middle" fill="#ea580c">(สร้าง Bridge COM3 ↔ COM5)</text>
+  <text x="760" y="425" font-size="12" text-anchor="middle" fill="#ea580c">COM5 คือหัวแปลงฝั่ง PC</text>
+
+  <!-- Extra Info Box -->
+  <rect x="50" y="420" width="400" height="80" rx="8" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="70" y="445" font-size="14" font-weight="bold" fill="#334155">โครงสร้างข้อมูล (R1 Frame Protocol)</text>
+  <text x="70" y="465" font-size="12" font-family="monospace" fill="#475569">&lt;STX&gt; R1,ID,Date,Time,SYS,MAP,DIA,PULSE,... &lt;ETX&gt; &lt;BCC&gt;</text>
+  <text x="70" y="485" font-size="12" fill="#64748b">การสกัดข้อมูล: แยกด้วยเครื่องหมายจุลภาค (Index 4=SYS, 6=DIA, 7=PULSE)</text>
+
+</svg>

@@ -107,6 +107,9 @@ class App(tk.Tk):
                   ).pack(side="left")
         ttk.Label(ctrls, text="sec").pack(side="left", padx=(2, 0))
 
+        self.auto_rand_var = tk.BooleanVar(value=False)
+        ttk.Checkbutton(ctrls, text="สุ่มค่าใหม่ทุกครั้งที่ส่ง", variable=self.auto_rand_var).pack(side="left", padx=10)
+
         # Log
         logf = ttk.LabelFrame(self, text="Sent frames", padding=5)
         logf.pack(fill="both", expand=True, padx=10, pady=(0, 10))
@@ -169,23 +172,38 @@ class App(tk.Tk):
 
     def _build_frame(self):
         now = time.localtime()
-        return FRAME_TEMPLATE.format(
-            date=time.strftime("%Y.%m.%d", now),
-            time=time.strftime("%H:%M", now),
-            sys=self.sys_var.get(),
-            dia=self.dia_var.get(),
-            pulse=self.pulse_var.get(),
-            prp=self.prp_var.get(),
-        )
+        date_str = time.strftime("%y%m%d", now)
+        time_str = time.strftime("%H%M%S", now)
+        sys_str = str(self.sys_var.get()).zfill(3)
+        dia_str = str(self.dia_var.get()).zfill(3)
+        pulse_str = str(self.pulse_var.get()).zfill(3)
+        
+        try:
+            sys = int(self.sys_var.get())
+            dia = int(self.dia_var.get())
+            map_val = round((sys + 2 * dia) / 3)
+            map_str = str(map_val).zfill(3)
+        except ValueError:
+            map_str = "000"
+
+        # R1,ID,YYMMDD,HHMMSS,SYS,MAP,DIA,PULSE,0000,0000,00000,000
+        body = f"R1,000000000,{date_str},{time_str},{sys_str},{map_str},{dia_str},{pulse_str},0000,0000,00000,000".encode('ascii')
+        
+        # STX = 0x02, ETX = 0x03
+        inner = bytes([0x02]) + body + bytes([0x03])
+        bcc = sum(inner) & 0xFF
+        return inner + bytes([bcc])
 
     def send_once(self):
         if not (self.ser and self.ser.is_open):
             return
+        if getattr(self, 'auto_rand_var', None) and self.auto_rand_var.get():
+            self.randomize()
         try:
             frame = self._build_frame()
-            self.ser.write(frame.encode("ascii"))
+            self.ser.write(frame)
             self.ser.flush()
-            self._log(f"-> {frame.encode('ascii')!r}")
+            self._log(f"-> {frame!r}")
         except Exception as e:
             self._log(f"send error: {e}")
 

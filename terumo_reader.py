@@ -315,8 +315,22 @@ class App(tk.Tk):
         if is_r1:
             self._send(parse_escape(self.reply_var.get()))
 
-        # try to extract numbers from non-R1 frames
-        if not is_r1:
+        # try to extract numbers from frames
+        if is_r1:
+            # R1,ID,YYMMDD,HHMMSS,SYS,MAP,DIA,PULSE,...
+            parts = text.split(',')
+            if len(parts) >= 8:
+                try:
+                    sys_v = int(parts[4])
+                    dia_v = int(parts[6])
+                    pulse_v = int(parts[7])
+                    self.sys_var.set(str(sys_v))
+                    self.dia_var.set(str(dia_v))
+                    self.pulse_var.set(str(pulse_v))
+                    self.time_var.set("received " + time.strftime("%Y-%m-%d %H:%M:%S"))
+                except ValueError:
+                    pass
+        else:
             nums = [int(n) for n in re.findall(r"\d+", text)]
             bp = [n for n in nums if 20 <= n <= 250]
             if len(bp) >= 3:

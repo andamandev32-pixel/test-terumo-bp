@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>คู่มือการใช้งาน Terumo BR-500 Simulator & Reader</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8fafc;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        h1 {
+            color: #1e3a8a;
+            border-bottom: 2px solid #eff6ff;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #2563eb;
+            margin-top: 30px;
+        }
+        h3 {
+            color: #3b82f6;
+        }
+        p, li {
+            font-size: 16px;
+        }
+        code {
+            background-color: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #ef4444;
+            font-family: Consolas, monospace;
+        }
+        pre {
+            background-color: #1e293b;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+        pre code {
+            background-color: transparent;
+            color: inherit;
+        }
+        .image-container {
+            text-align: center;
+            margin: 30px 0;
+            padding: 20px;
+            background: #ffffff;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>คู่มือการใช้งาน Terumo BR-500 Simulator & Reader</h1>
+    <p>เอกสารนี้อธิบายถึงขั้นตอนการตั้งค่าและใช้งานโปรแกรมจำลองเครื่องวัดความดัน Terumo BR-500 รวมถึงแนวทางในการนำ Simulator ตัวนี้ไปใช้เป็นเครื่องจำลองสำหรับการพัฒนาแอปพลิเคชันบน Android</p>
+
+    <hr style="border: 1px solid #f1f5f9; margin: 30px 0;">
+
+    <h2>1. ภาพรวมของระบบ (System Architecture)</h2>
+    <p>ระบบประกอบด้วย 3 ส่วนหลัก ได้แก่ ตัวส่ง (Simulator), ตัวเชื่อมประสาน (Virtual COM Port), และตัวรับ (Reader หรือ Android App)</p>
+
+    <div class="image-container">
+        <!-- ฝังรูปภาพ SVG ลงไปตรงๆ เพื่อให้เปิดได้ทันทีโดยไม่ต้องดึงไฟล์อื่น -->
+        <svg width="100%" height="auto" viewBox="0 0 900 550" xmlns="http://www.w3.org/2000/svg" style="font-family: 'Segoe UI', sans-serif;">
+          <defs>
+            <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+              <feDropShadow dx="0" dy="4" stdDeviation="6" flood-opacity="0.1"/>
+            </filter>
+            <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
+            </marker>
+          </defs>
+
+          <!-- Background -->
+          <rect width="100%" height="100%" fill="#f8fafc"/>
+
+          <!-- Title -->
+          <text x="450" y="40" font-size="24" font-weight="bold" text-anchor="middle" fill="#1e293b">Terumo Simulator &amp; Android Integration Workflow</text>
+          <text x="450" y="65" font-size="14" text-anchor="middle" fill="#64748b">แผนภาพแสดงการเชื่อมต่อเพื่อจำลองและนำไปใช้งานในการพัฒนาแอปพลิเคชัน</text>
+
+          <!-- Lines -->
+          <path d="M 250 250 L 350 250" stroke="#64748b" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+          <text x="300" y="240" font-size="12" text-anchor="middle" fill="#64748b">R1 Frame</text>
+          <path d="M 550 250 C 600 250, 600 130, 650 130" stroke="#64748b" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+          <path d="M 550 250 L 650 250" stroke="#64748b" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+          <path d="M 550 250 C 600 250, 600 370, 650 370" stroke="#64748b" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+
+          <!-- Simulator Node -->
+          <rect x="50" y="200" width="200" height="100" rx="12" fill="#eff6ff" stroke="#3b82f6" stroke-width="2" filter="url(#shadow)"/>
+          <text x="150" y="235" font-size="18" font-weight="bold" text-anchor="middle" fill="#1e3a8a">Terumo Simulator</text>
+          <text x="150" y="260" font-size="14" text-anchor="middle" fill="#1d4ed8">terumo_simulator.exe</text>
+          <text x="150" y="280" font-size="12" text-anchor="middle" fill="#3b82f6">(Port: COM3)</text>
+
+          <!-- Virtual COM Bridge Node -->
+          <rect x="350" y="190" width="200" height="120" rx="12" fill="#fefce8" stroke="#eab308" stroke-width="2" filter="url(#shadow)"/>
+          <text x="450" y="225" font-size="16" font-weight="bold" text-anchor="middle" fill="#854d0e">Virtual COM Bridge</text>
+          <text x="450" y="250" font-size="13" text-anchor="middle" fill="#a16207">HHD Virtual Serial Port</text>
+          <text x="450" y="275" font-size="14" font-weight="bold" text-anchor="middle" fill="#ca8a04">COM3 ↔ COM4</text>
+          <text x="450" y="295" font-size="11" text-anchor="middle" fill="#eab308">(เชื่อมต่อพอร์ตเสมือน)</text>
+
+          <!-- Reader Node -->
+          <rect x="650" y="90" width="220" height="80" rx="12" fill="#f0fdf4" stroke="#22c55e" stroke-width="2" filter="url(#shadow)"/>
+          <text x="760" y="125" font-size="16" font-weight="bold" text-anchor="middle" fill="#14532d">Terumo Reader</text>
+          <text x="760" y="150" font-size="12" text-anchor="middle" fill="#16a34a">เชื่อมต่อที่ COM4 เพื่อทดสอบ</text>
+
+          <!-- Emulator Node -->
+          <rect x="650" y="210" width="220" height="80" rx="12" fill="#fff7ed" stroke="#f97316" stroke-width="2" filter="url(#shadow)"/>
+          <text x="760" y="245" font-size="16" font-weight="bold" text-anchor="middle" fill="#7c2d12">Android Emulator</text>
+          <text x="760" y="270" font-size="12" text-anchor="middle" fill="#ea580c">รันด้วย -qemu -serial COM4</text>
+
+          <!-- Physical Device Node -->
+          <rect x="650" y="330" width="220" height="120" rx="12" fill="#fff7ed" stroke="#f97316" stroke-width="2" filter="url(#shadow)"/>
+          <text x="760" y="360" font-size="16" font-weight="bold" text-anchor="middle" fill="#7c2d12">Android Physical Device</text>
+          <text x="760" y="385" font-size="12" text-anchor="middle" fill="#ea580c">ต่อผ่านสาย USB-OTG + RS232</text>
+          <text x="760" y="405" font-size="12" text-anchor="middle" fill="#ea580c">(สร้าง Bridge COM3 ↔ COM5)</text>
+          <text x="760" y="425" font-size="12" text-anchor="middle" fill="#ea580c">COM5 คือหัวแปลงฝั่ง PC</text>
+
+          <!-- Extra Info Box -->
+          <rect x="50" y="420" width="400" height="80" rx="8" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+          <text x="70" y="445" font-size="14" font-weight="bold" fill="#334155">โครงสร้างข้อมูล (R1 Frame Protocol)</text>
+          <text x="70" y="465" font-size="12" font-family="monospace" fill="#475569">&lt;STX&gt; R1,ID,Date,Time,SYS,MAP,DIA,PULSE,... &lt;ETX&gt; &lt;BCC&gt;</text>
+          <text x="70" y="485" font-size="12" fill="#64748b">การสกัดข้อมูล: แยกด้วยเครื่องหมายจุลภาค (Index 4=SYS, 6=DIA, 7=PULSE)</text>
+        </svg>
+    </div>
+
+    <hr style="border: 1px solid #f1f5f9; margin: 30px 0;">
+
+    <h2>2. การติดตั้งและตั้งค่าพอร์ตจำลอง (Virtual COM Port Setup)</h2>
+    <p>ในการพัฒนาโปรแกรมที่ต้องเชื่อมต่อกับอุปกรณ์ฮาร์ดแวร์ผ่าน Serial Port นักพัฒนาจำเป็นต้องมี <strong>Virtual COM Port Bridge</strong> เพื่อจำลองสายเคเบิลรับส่งข้อมูลภายในเครื่องคอมพิวเตอร์ตัวเอง ทำให้สามารถใช้รันโปรแกรม Simulator (ผู้ส่ง) และโปรแกรมแอปพลิเคชัน (ผู้รับ) พร้อมกันได้โดยไม่ต้องมีฮาร์ดแวร์จริง</p>
+
+    <div style="background: #f0fdf4; border: 1px solid #86efac; padding: 25px; border-radius: 8px;">
+        <h3 style="color: #15803d; margin-top: 0; font-size: 20px;">ใช้โปรแกรม HHD Virtual Serial Port Tools</h3>
+        <p><strong>จุดเด่น:</strong> มีหน้าตา UI ใช้งานง่าย เหมาะสำหรับการนำไปจำลองพอร์ตให้แอปพลิเคชัน (Android) หรืออ่านค่าด้วยโค้ด Python</p>
+        
+        <div style="text-align: center;">
+            <img src="./hhd_screenshot.png" alt="HHD Virtual Serial Port Interface" style="max-width: 100%; border-radius: 8px; margin: 20px 0; border: 1px solid #d1d5db; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        </div>
+        
+        <h4 style="color: #166534;">ขั้นตอนการตั้งค่า (อ้างอิงตามภาพด้านบน):</h4>
+        <ol style="font-size: 16px; line-height: 1.8;">
+            <li>ดาวน์โหลดโปรแกรมจากเว็บไซต์ (<a href="https://freevirtualserialports.com/" target="_blank">ลิงก์ดาวน์โหลด</a>) และทำการติดตั้ง</li>
+            <li>เปิดโปรแกรม มองหากล่อง <strong>"Local Bridges"</strong> ที่อยู่มุมซ้ายบน</li>
+            <li>กดปุ่มเครื่องหมายบวกสีเขียว <strong>(+) Create New Bridge</strong> ที่อยู่ด้านล่างของกล่องนั้น</li>
+            <li>เลือกระบุพอร์ตซ้ายเป็น <strong>COM3</strong> และระบุพอร์ตขวาเป็น <strong>COM4</strong> จากนั้นกดปุ่ม Apply</li>
+            <li>เมื่อเห็นรายการ <strong>COM3 ↔ COM4</strong> ปรากฏขึ้นในกล่องสีขาว ถือว่าการตั้งค่าเสร็จสมบูรณ์ พอร์ตทั้งสองทะลุถึงกันแล้ว</li>
+        </ol>
+    </div>
+
+    <h2>3. วิธีการใช้งาน Simulator และ Reader</h2>
+    <p>โปรแกรมทั้งสองทำงานแบบ <strong>Standalone</strong> (ไฟล์ <code>.exe</code>) สามารถเปิดใช้งานได้ทันทีโดยไม่ต้องติดตั้ง</p>
+
+    <h3>ฝั่งเครื่องจำลอง (Simulator)</h3>
+    <ol>
+        <li>เปิดไฟล์ <code>terumo_simulator.exe</code></li>
+        <li>เลือก <strong>Port: COM3</strong> และตั้งค่า Baud: <strong>19200</strong></li>
+        <li>กดปุ่ม <strong>Connect</strong></li>
+        <li>สามารถติ๊กเลือก <strong>"สุ่มค่าใหม่ทุกครั้งที่ส่ง"</strong> เพื่อให้ข้อมูลเปลี่ยนไปเรื่อยๆ โดยอัตโนมัติ</li>
+        <li>ติ๊กที่ <strong>Auto-send every X sec</strong> เพื่อให้โปรแกรมยิงข้อมูลออกไปอย่างต่อเนื่อง</li>
+    </ol>
+
+    <h3>ฝั่งโปรแกรมอ่านค่า (Reader) - สำหรับใช้ทดสอบ</h3>
+    <ol>
+        <li>เปิดไฟล์ <code>terumo_reader.exe</code></li>
+        <li>เลือก <strong>Port: COM4</strong> และตั้งค่า Baud: <strong>19200</strong> (ต้องตรงกับ Simulator)</li>
+        <li>กดปุ่ม <strong>Connect</strong></li>
+        <li>เมื่อ Simulator ส่งข้อมูลมา ตัว Reader จะถอดรหัสและดึงตัวเลขความดัน (SYS, DIA, PULSE) มาแสดงผลที่หน้าจอทันที</li>
+    </ol>
+
+    <h2>4. การนำไปใช้พัฒนาแอปพลิเคชัน Android</h2>
+    <p>คุณสามารถใช้ <code>terumo_simulator.exe</code> เป็นเสมือนเครื่อง Terumo ของจริง เพื่อยิงข้อมูลความดันเข้าแอปพลิเคชัน Android ของคุณที่กำลังพัฒนาอยู่ได้</p>
+
+    <h3>4.1 รูปแบบข้อมูลที่ส่งออก (Protocol Format)</h3>
+    <p>ข้อมูลที่ Simulator ยิงออกมาจะเป็นรูปแบบ <strong>R1 Frame</strong> มาตรฐานของ Terumo:</p>
+    <ul>
+        <li><strong>รูปแบบ:</strong> <code>&lt;STX&gt; R1,ID,Date,Time,SYS,MAP,DIA,PULSE,0000,0000,00000,000 &lt;ETX&gt; &lt;BCC&gt;</code></li>
+        <li><strong>การถอดรหัสในแอป:</strong> เมื่อแอป Android รับข้อมูลมา ให้แยกข้อความด้วยเครื่องหมายจุลภาค (<code>,</code>)
+            <ul>
+                <li><code>Index 4</code> = SYS (Systolic)</li>
+                <li><code>Index 5</code> = MAP</li>
+                <li><code>Index 6</code> = DIA (Diastolic)</li>
+                <li><code>Index 7</code> = PULSE</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h3>4.2 การจำลองพอร์ตสำหรับ Android Emulator</h3>
+    <p>หากคุณเขียนแอปบน Android Studio และใช้ <strong>Android Emulator</strong> ในการรันแอป คุณสามารถส่งผ่าน (Map) พอร์ต COM4 เข้าไปยัง Emulator ได้:</p>
+    <ol>
+        <li>ปิด Android Emulator</li>
+        <li>รัน Emulator ผ่าน Command Line โดยเพิ่ม Flag <code>-qemu -serial COM4</code><br>
+            <em>ตัวอย่างคำสั่ง:</em>
+<pre><code>emulator -avd Pixel_4_API_30 -qemu -serial COM4</code></pre>
+        </li>
+        <li>ในโค้ดแอป Android ให้เปิดการเชื่อมต่อพอร์ตที่ <code>/dev/ttyS1</code> หรือ <code>/dev/ttyS2</code> (ซึ่งเป็นพอร์ตเสมือนที่ถูกโยงกับ COM4 ของ PC)</li>
+    </ol>
+
+    <h3>4.3 การเชื่อมต่อกับอุปกรณ์โทรศัพท์ Android ของจริง (Physical Device)</h3>
+    <p>หากทดสอบบนมือถือ/แท็บเล็ตจริง คุณจะต้องใช้สายเคเบิลแปลงสัญญาณ (USB to RS232) ดังนี้:</p>
+    <ol>
+        <li>นำหัวแปลง <strong>USB to Serial (RS232)</strong> เสียบเข้ากับพอร์ต USB ของ PC (สมมติได้ชื่อพอร์ตเป็น COM5)</li>
+        <li>นำสาย <strong>USB OTG</strong> เสียบเข้ากับมือถือ Android และต่อเข้ากับหัวแปลง USB to Serial อีกเส้นหนึ่ง</li>
+        <li>นำปลายสาย Serial (หัว DB9) ของทั้งสองฝั่งมาต่อกัน (อาจต้องใช้หัวแปลง Null Modem ตัวเมีย-ตัวเมีย)</li>
+        <li>เปิดโปรแกรม <strong>HHD Virtual Serial Port Tools</strong> แล้วสร้าง Bridge เชื่อมระหว่าง <strong>COM3</strong> (ฝั่ง Simulator) เข้ากับ <strong>COM5</strong> (ฝั่ง USB ที่ต่อออกไปมือถือ)</li>
+        <li>เปิดแอปบน Android (อาจใช้ไลบรารีอย่าง <code>usb-serial-for-android</code>) สั่งให้อ่านข้อมูลจากสาย USB OTG ก็จะได้รับข้อมูลที่ส่งมาจาก Simulator ทันทีครับ</li>
+    </ol>
+
+    <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 15px; margin-top: 30px; border-radius: 4px;">
+        <h3 style="margin-top: 0;">สรุป Workflow ในการทำงานพัฒนาแอป</h3>
+        <ol style="margin-bottom: 0;">
+            <li>เปิด <strong>HHD</strong> จำลองพอร์ต</li>
+            <li>เปิด <strong>Simulator</strong> ปล่อยรันสุ่มค่าทิ้งไว้</li>
+            <li>รันโปรเจกต์บน <strong>Android Studio</strong> ดักจับข้อมูล Serial Port</li>
+            <li>เขียนโค้ดในแอป Android ให้ตัดคำด้วยลูกน้ำ (<code>,</code>) และนำค่าความดันไปโชว์ใน UI ของแอป</li>
+        </ol>
+    </div>
+</div>
+
+</body>
+</html>
